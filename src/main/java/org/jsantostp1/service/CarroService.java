@@ -1,6 +1,7 @@
 package org.jsantostp1.service;
 
 import org.jsantostp1.model.Carro;
+import org.jsantostp1.model.Combustivel;
 import org.jsantostp1.repository.CarroRepository;
 
 import java.util.List;
@@ -13,8 +14,8 @@ public class CarroService {
         this.repository = repository;
     }
 
-    public void cadastrarCarro(String marca, String modelo, int ano, int cavalos, Double cilindrada) {
-        Carro carro = new Carro(marca, modelo, ano, cavalos, cilindrada);
+    public void cadastrarCarro(String marca, String modelo, int ano, List<Combustivel> combustiveis, int cavalos, Double cilindrada) {
+        Carro carro = new Carro(marca, modelo, ano, combustiveis ,cavalos, cilindrada);
         repository.adicionar(carro);
     }
 
@@ -26,10 +27,14 @@ public class CarroService {
         return repository.buscarPorId(id);
     }
 
-    public boolean atualizarCarro(int id, String novaMarca, String novoModelo, int novoAno, int novosCavalos, Double novaCilindrada) {
-        Carro carroAtualizado = new Carro(novaMarca, novoModelo, novoAno, novosCavalos, novaCilindrada);
-        carroAtualizado.setId(id);
-        return repository.atualizar(carroAtualizado);
+    public boolean atualizarCarro(int id, String marca, String modelo, int ano, List<Combustivel> combustiveis, int cavalos, double cilindrada) {
+        Optional<Carro> original = repository.buscarPorId(id);
+        if (original.isEmpty()) {
+            return false;
+        }
+
+        Carro atualizado = new Carro(id, marca, modelo, ano, combustiveis, cavalos, cilindrada);
+        return repository.atualizar(atualizado);
     }
 
     public boolean removerCarro(int id) {

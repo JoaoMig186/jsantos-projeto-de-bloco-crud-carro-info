@@ -1,80 +1,48 @@
 package org.jsantostp1.model;
+import java.util.List;
 
-public class Carro {
-    private int id;
-    private String marca;
-    private String modelo;
-    private int ano;
-    private int cavalos;
-    private Double cilindrada;
+public final class Carro {
+    private final int id;
+    private final String marca;
+    private final String modelo;
+    private final int ano;
+    private final List<Combustivel> combustiveis;
+    private final int cavalos;
+    private final double cilindrada;
 
-    public Carro(String marca, String modelo, int ano, int cavalos, Double cilindrada) {
+    public Carro(int id, String marca, String modelo, int ano, List<Combustivel> combustiveis, int cavalos, double cilindrada) {
+        this.id = id;
         this.marca = marca;
         this.modelo = modelo;
         this.ano = ano;
+        this.combustiveis = List.copyOf(combustiveis);
         this.cavalos = cavalos;
         this.cilindrada = cilindrada;
+    }
+
+    public Carro(String marca, String modelo, int ano, List<Combustivel> combustiveis, int cavalos, double cilindrada) {
+        this(0, marca, modelo, ano, combustiveis, cavalos, cilindrada);
     }
 
     // Getters
-    public int getId() {
-        return id;
-    }
-
-    public String getMarca() {
-        return marca;
-    }
-
-    public String getModelo() {
-        return modelo;
-    }
-
-    public int getAno() {
-        return ano;
-    }
-
-    public int getCavalos(){
-        return cavalos;
-    }
-
-    public Double getCilindrada(){
-        return cilindrada;
-    }
-
-    // Setters
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    public void setMarca(String marca) {
-        this.marca = marca;
-    }
-
-    public void setModelo(String modelo) {
-        this.modelo = modelo;
-    }
-
-    public void setAno(int ano) {
-        this.ano = ano;
-    }
-
-    public void setCavalos(int cavalos){
-        this.cavalos = cavalos;
-    }
-
-    public void setCilindrada(Double cilindrada){
-        this.cilindrada = cilindrada;
-    }
+    public int getId() { return id; }
+    public String getMarca() { return marca; }
+    public String getModelo() { return modelo; }
+    public int getAno() { return ano; }
+    public List<Combustivel> getCombustiveis() { return combustiveis; }
+    public int getCavalos() { return cavalos; }
+    public double getCilindrada() { return cilindrada; }
 
     @Override
     public String toString() {
-        return "Carro {" +
+        return "Carro{" +
                 "id=" + id +
                 ", marca='" + marca + '\'' +
                 ", modelo='" + modelo + '\'' +
-                ", ano=" + ano + '\'' +
-                ", cavalos=" + cavalos + '\'' +
-                ", cilindrada=" + cilindrada + '\'' +
+                ", ano=" + ano +
+                ", combustiveis=" + combustiveis +
+                ", cavalos=" + cavalos +
+                ", cilindrada=" + cilindrada +
                 '}';
     }
 }
