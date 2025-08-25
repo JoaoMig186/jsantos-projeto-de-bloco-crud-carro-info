@@ -11,8 +11,16 @@ public class CarroRepository {
     private int proximoId = 0;
 
     public void adicionar(Carro carro) {
-        carro.setId(proximoId++);
-        carros.add(carro);
+        Carro carroComId = new Carro(
+                ++proximoId,
+                carro.getMarca(),
+                carro.getModelo(),
+                carro.getAno(),
+                carro.getCombustiveis(),
+                carro.getCavalos(),
+                carro.getCilindrada()
+        );
+        carros.add(carroComId);
     }
 
     public List<Carro> listarTodos() {
@@ -25,16 +33,13 @@ public class CarroRepository {
                 .findFirst();
     }
 
-    public boolean atualizar(Carro carroAtualizado) {
-        Optional<Carro> carroExistente = buscarPorId(carroAtualizado.getId());
-        if (carroExistente.isPresent()) {
-            Carro c = carroExistente.get();
-            c.setMarca(carroAtualizado.getMarca());
-            c.setModelo(carroAtualizado.getModelo());
-            c.setAno(carroAtualizado.getAno());
-            c.setCavalos(carroAtualizado.getCavalos());
-            c.setCilindrada(carroAtualizado.getCilindrada());
-            return true;
+    public boolean atualizar(Carro novoCarro) {
+        for (int i = 0; i < carros.size(); i++) {
+            Carro existente = carros.get(i);
+            if (existente.getId() == novoCarro.getId()) {
+                carros.set(i, novoCarro);
+                return true;
+            }
         }
         return false;
     }
