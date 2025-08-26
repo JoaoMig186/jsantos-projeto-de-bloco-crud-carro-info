@@ -2,8 +2,9 @@ package org.jsantostp1.service;
 
 import net.jqwik.api.*;
 import net.jqwik.api.constraints.*;
-import org.jsantostp1.repository.CarroRepository;
 import org.jsantostp1.model.Carro;
+import org.jsantostp1.model.Combustivel;
+import org.jsantostp1.repository.CarroRepository;
 
 import java.util.List;
 
@@ -11,7 +12,14 @@ import static org.assertj.core.api.Assertions.*;
 
 public class CarroServicePropertyTest {
 
-    // Geração de marcas válidas
+    @Provide
+    Arbitrary<List<Combustivel>> combustiveisValidos() {
+        return Arbitraries.of(Combustivel.values())
+                .set()
+                .ofMinSize(1).ofMaxSize(2)
+                .map(List::copyOf);
+    }
+
     @Provide
     Arbitrary<String> marcasValidas() {
         return Arbitraries.strings()
@@ -20,7 +28,6 @@ public class CarroServicePropertyTest {
                 .ofMaxLength(20);
     }
 
-    // Geração de modelos válidos
     @Provide
     Arbitrary<String> modelosValidos() {
         return Arbitraries.strings()
@@ -29,11 +36,11 @@ public class CarroServicePropertyTest {
                 .ofMaxLength(20);
     }
 
-    // Propriedade: deve cadastrar corretamente carros com dados válidos
     @Property
     void deveCadastrarCarroComDadosValidos(
             @ForAll("marcasValidas") String marca,
             @ForAll("modelosValidos") String modelo,
+            @ForAll("combustiveisValidos") List<Combustivel> combustiveis,
             @ForAll @IntRange(min = 1886, max = 2030) int ano,
             @ForAll @IntRange(min = 1, max = 2000) int cavalos,
             @ForAll @DoubleRange(min = 0.1, max = 8.0) double cilindrada
@@ -41,7 +48,7 @@ public class CarroServicePropertyTest {
         CarroRepository repository = new CarroRepository();
         CarroService service = new CarroService(repository);
 
-        service.cadastrarCarro(marca, modelo, ano, cavalos, cilindrada);
+        service.cadastrarCarro(marca, modelo, ano, combustiveis, cavalos, cilindrada);
 
         List<Carro> carros = service.listarCarros();
 
@@ -53,18 +60,19 @@ public class CarroServicePropertyTest {
         assertThat(carro.getAno()).isEqualTo(ano);
         assertThat(carro.getCavalos()).isEqualTo(cavalos);
         assertThat(carro.getCilindrada()).isEqualTo(cilindrada);
+        assertThat(carro.getCombustiveis()).isEqualTo(combustiveis);
     }
 
-    // Propriedade: IDs devem ser únicos e incrementais
     @Property
     void idsDevemSerUnicosEIncrementais(
-            @ForAll @IntRange(min = 2, max = 10) int quantidade
+            @ForAll @IntRange(min = 2, max = 10) int quantidade,
+            @ForAll("combustiveisValidos") List<Combustivel> combustiveis
     ) {
         CarroRepository repository = new CarroRepository();
         CarroService service = new CarroService(repository);
 
         for (int i = 0; i < quantidade; i++) {
-            service.cadastrarCarro("Marca" + i, "Modelo" + i, 2020, 100 + i, 1.6 + i);
+            service.cadastrarCarro("Marca" + i, "Modelo" + i, 2020, combustiveis, 100 + i, 1.6 + i);
         }
 
         List<Carro> carros = service.listarCarros();
@@ -75,4 +83,24 @@ public class CarroServicePropertyTest {
             assertThat(carros.get(i).getId()).isEqualTo(i + 1);
         }
     }
+
+    @Property
+    void carroSempreDeveTerUmOuDoisCombustiveis(
+            @ForAll("marcasValidas") String marca,
+            @ForAll("modelosValidos") String modelo,
+            @ForAll("combustiveisValidos") List<Combustivel> combustiveis,
+            @ForAll @IntRange(min = 1900, max = 2030) int ano,
+            @ForAll @IntRange(min = 50, max = 2000) int cavalos,
+            @ForAll @DoubleRange(min = 0.5, max = 8.0) double cilindrada
+    ) {
+        CarroRepository repository = new CarroRepository();
+        CarroService service = new CarroService(repository);
+
+        service.cadastrarCarro(marca, modelo, ano, combustiveis, cavalos, cilindrada);
+
+        Carro carro = service.listarCarros().get(0);
+
+        assertThat(carro.getCombustiveis().size()).isBetween(1, 2);
+    }
+
 }

@@ -19,9 +19,10 @@ public final class Carro {
         this.cavalos = cavalos;
         this.cilindrada = cilindrada;
     }
+    public static final int ID_NAO_DEFINIDO = -1;
 
     public Carro(String marca, String modelo, int ano, List<Combustivel> combustiveis, int cavalos, double cilindrada) {
-        this(0, marca, modelo, ano, combustiveis, cavalos, cilindrada);
+        this(ID_NAO_DEFINIDO, marca, modelo, ano, combustiveis, cavalos, cilindrada);
     }
 
     // Getters
