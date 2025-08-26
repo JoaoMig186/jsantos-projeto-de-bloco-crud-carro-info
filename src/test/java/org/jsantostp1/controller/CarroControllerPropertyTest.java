@@ -29,7 +29,6 @@ public class CarroControllerPropertyTest {
                 .ofMinLength(2).ofMaxLength(10);
     }
 
-    // ----------------- Teste de Cadastro -----------------
     @Property
     void deveCadastrarCarroPelaController(
             @ForAll("marcasValidas") String marca,
@@ -41,7 +40,7 @@ public class CarroControllerPropertyTest {
         String fakeInput = marca + "\n" +
                 modelo + "\n" +
                 ano + "\n" +
-                "1\n0\n" +  // escolha de combustíveis
+                "1\n0\n" +
                 cavalos + "\n" +
                 cilindrada + "\n";
 
@@ -129,7 +128,7 @@ public class CarroControllerPropertyTest {
                 cavalos + "\n" +
                 cilindrada + "\n";
 
-        String removerInput = "1\n"; // ID do carro a remover
+        String removerInput = "1\n";
 
         String fakeInput = cadastroInput + removerInput;
 
