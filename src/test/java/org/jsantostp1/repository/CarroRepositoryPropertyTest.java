@@ -1,9 +1,7 @@
-package org.jsantostp1.service;
+package org.jsantostp1.repository;
 
 import net.jqwik.api.*;
-import net.jqwik.api.constraints.*;
 import org.jsantostp1.model.*;
-import org.jsantostp1.repository.CarroRepository;
 
 import java.util.List;
 

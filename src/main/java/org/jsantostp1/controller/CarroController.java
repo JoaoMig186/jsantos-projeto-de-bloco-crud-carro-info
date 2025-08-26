@@ -1,11 +1,12 @@
 package org.jsantostp1.controller;
+
 import org.jsantostp1.model.Combustivel;
 import org.jsantostp1.service.CarroService;
+import org.jsantostp1.util.InputUtils;
 
 import java.util.ArrayList;
-import java.util.Scanner;
-import org.jsantostp1.util.InputUtils;
 import java.util.List;
+import java.util.Scanner;
 
 public class CarroController {
     private final CarroService service;
@@ -15,6 +16,12 @@ public class CarroController {
     public CarroController(CarroService service) {
         this.service = service;
         this.scanner = new Scanner(System.in);
+        this.input = new InputUtils(scanner);
+    }
+
+    public CarroController(CarroService service, Scanner scanner) {
+        this.service = service;
+        this.scanner = scanner;
         this.input = new InputUtils(scanner);
     }
 
@@ -50,7 +57,6 @@ public class CarroController {
         List<Combustivel> combustiveis = new ArrayList<>();
 
         while (true) {
-
             if (combustiveis.size() == 2) {
                 System.out.println("Já foram escolhidos 2 combustíveis (máximo permitido).");
                 break;
@@ -89,7 +95,7 @@ public class CarroController {
         return combustiveis;
     }
 
-    private void cadastrar() {
+    void cadastrar() {
         String marca = input.lerString("Marca: ");
         String modelo = input.lerString("Modelo: ");
         int ano = input.lerInt("Ano: ", 1886);
@@ -119,7 +125,7 @@ public class CarroController {
         }
     }
 
-    private void atualizar() {
+    void atualizar() {
         int id = input.lerInt("ID do carro a atualizar: ", 1);
 
         var carroExistente = service.buscarCarroPorId(id);
@@ -145,7 +151,7 @@ public class CarroController {
         }
     }
 
-    private void remover() {
+    void remover() {
         System.out.print("ID do carro a remover: ");
         int id = scanner.nextInt();
         scanner.nextLine();
