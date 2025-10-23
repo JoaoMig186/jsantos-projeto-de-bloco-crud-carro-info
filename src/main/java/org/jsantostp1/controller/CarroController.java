@@ -1,166 +1,93 @@
 package org.jsantostp1.controller;
 
+import io.javalin.Javalin;
 import org.jsantostp1.model.Combustivel;
+import org.jsantostp1.repository.CarroRepository;
 import org.jsantostp1.service.CarroService;
-import org.jsantostp1.util.InputUtils;
+import org.jsantostp1.view.CarroView;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
 
 public class CarroController {
     private final CarroService service;
-    private final Scanner scanner;
-    private final InputUtils input;
 
-    public CarroController(CarroService service) {
-        this.service = service;
-        this.scanner = new Scanner(System.in);
-        this.input = new InputUtils(scanner);
-    }
+    public CarroController(Javalin app){
+        this.service = new CarroService(new CarroRepository());
 
-    public CarroController(CarroService service, Scanner scanner) {
-        this.service = service;
-        this.scanner = scanner;
-        this.input = new InputUtils(scanner);
-    }
+        app.get("/carros", ctx ->
+                ctx.html(CarroView.renderList(service.listarCarros()))
+        );
 
-    public void iniciar() {
-        int opcao;
+        app.get("carros/new", ctx ->
+                ctx.html(CarroView.renderForm(new HashMap<>()))
+        );
 
-        do {
-            System.out.println("\n===== MENU CARROS =====");
-            System.out.println("1 - Cadastrar carro");
-            System.out.println("2 - Listar carros");
-            System.out.println("3 - Buscar carro por ID");
-            System.out.println("4 - Atualizar carro");
-            System.out.println("5 - Remover carro");
-            System.out.println("0 - Sair");
-            System.out.print("Escolha uma opção: ");
-            opcao = scanner.nextInt();
-            scanner.nextLine();
-
-            switch (opcao) {
-                case 1 -> cadastrar();
-                case 2 -> listar();
-                case 3 -> buscarPorId();
-                case 4 -> atualizar();
-                case 5 -> remover();
-                case 0 -> System.out.println("Encerrando...");
-                default -> System.out.println("Opção inválida!");
+        app.post("/carros", ctx ->{
+            String marca= ctx.formParam("marca");
+            String modelo = ctx.formParam("modelo");
+            int ano = Integer.parseInt(ctx.formParam("ano"));
+            List<Combustivel> combustiveis = ctx.formParams("combustiveis").stream()
+                    .map(s -> Combustivel.valueOf(s.toUpperCase()))
+                    .toList();
+            if (combustiveis == null || combustiveis.isEmpty()) {
+                throw new IllegalArgumentException("Selecione pelo menos um tipo de combustível.");
             }
+            int cavalos = Integer.parseInt(ctx.formParam("cavalos"));
+            double cilindrada = Double.parseDouble(ctx.formParam("cilindrada"));
 
-        } while (opcao != 0);
-    }
+            service.cadastrarCarro(marca, modelo, ano, combustiveis, cavalos, cilindrada);
+            ctx.redirect("/carros");
+        });
 
-    private List<Combustivel> escolherCombustiveis() {
-        List<Combustivel> combustiveis = new ArrayList<>();
+        app.get("/carros/edit/{id}", ctx -> {
+            int id = ctx.pathParamAsClass("id", Integer.class).get();
 
-        while (true) {
-            if (combustiveis.size() == 2) {
-                System.out.println("Já foram escolhidos 2 combustíveis (máximo permitido).");
-                break;
+            service.buscarCarroPorId(id).ifPresentOrElse(carro -> {
+                Map<String, Object> model = new HashMap<>();
+                model.put("id", carro.getId());
+                model.put("marca", carro.getMarca());
+                model.put("modelo", carro.getModelo());
+                model.put("ano", carro.getAno());
+                model.put("combustiveis", carro.getCombustiveis());
+                model.put("cavalos", carro.getCavalos());
+                model.put("cilindrada", carro.getCilindrada());
+
+                ctx.html(CarroView.renderForm(model));
+            }, () -> ctx.status(404).result("Carro não encontrado"));
+        });
+
+        app.post("/carros/edit/{id}", ctx -> {
+            int id = ctx.pathParamAsClass("id", Integer.class).get();
+
+            String marca = ctx.formParam("marca");
+            String modelo = ctx.formParam("modelo");
+            int ano = Integer.parseInt(ctx.formParam("ano"));
+            List<Combustivel> combustiveis = ctx.formParams("combustiveis").stream()
+                    .map(s -> Combustivel.valueOf(s.toUpperCase()))
+                    .toList();
+            int cavalos = Integer.parseInt(ctx.formParam("cavalos"));
+            double cilindrada = Double.parseDouble(ctx.formParam("cilindrada"));
+
+            boolean atualizado = service.atualizarCarro(id, marca, modelo, ano, combustiveis, cavalos, cilindrada);
+
+            if (atualizado) {
+                ctx.redirect("/carros");
+            } else {
+                ctx.status(404).result("Carro não encontrado para atualização");
             }
+        });
 
-            System.out.println("\nEscolha um combustível:");
-            int i = 1;
-            for (Combustivel c : Combustivel.values()) {
-                System.out.println(i + " - " + c);
-                i++;
+        app.post("/carros/delete/{id}", ctx -> {
+            int id = ctx.pathParamAsClass("id", Integer.class).get();
+            boolean removido = service.removerCarro(id);
+
+            if (removido) {
+                ctx.redirect("/carros");
+            } else {
+                ctx.status(404).result("Carro não encontrado para exclusão");
             }
-            System.out.println("0 - Finalizar escolha");
+        });
 
-            int opcao = input.lerInt("Opção: ", 0);
-
-            switch (opcao) {
-                case 0 -> {
-                    if (combustiveis.isEmpty()) {
-                        System.out.println("É obrigatório escolher pelo menos 1 combustível.");
-                    } else {
-                        return combustiveis;
-                    }
-                }
-                case 1, 2, 3 -> {
-                    Combustivel escolhido = Combustivel.values()[opcao - 1];
-                    if (combustiveis.contains(escolhido)) {
-                        System.out.println("Esse combustível já foi escolhido.");
-                    } else {
-                        combustiveis.add(escolhido);
-                        System.out.println(escolhido + " adicionado!");
-                    }
-                }
-                default -> System.out.println("Opção inválida!");
-            }
-        }
-        return combustiveis;
     }
 
-    void cadastrar() {
-        String marca = input.lerString("Marca: ");
-        String modelo = input.lerString("Modelo: ");
-        int ano = input.lerInt("Ano: ", 1886);
-        List<Combustivel> combustiveis = escolherCombustiveis();
-        int cavalos = input.lerInt("Cavalos de potência: ", 1);
-        double cilindrada = input.lerDouble("Cilindrada (ex: 2.0): ", 1.0);
-
-        service.cadastrarCarro(marca, modelo, ano, combustiveis, cavalos, cilindrada);
-        System.out.println("Carro cadastrado com sucesso!");
-    }
-
-    private void listar() {
-        System.out.println("\n--- Lista de Carros ---");
-        service.listarCarros().forEach(System.out::println);
-    }
-
-    private void buscarPorId() {
-        System.out.print("Informe o ID do carro: ");
-        int id = scanner.nextInt();
-        scanner.nextLine();
-
-        var carro = service.buscarCarroPorId(id);
-        if (carro.isPresent()) {
-            System.out.println(carro.get());
-        } else {
-            System.out.println("Carro não encontrado.");
-        }
-    }
-
-    void atualizar() {
-        int id = input.lerInt("ID do carro a atualizar: ", 1);
-
-        var carroExistente = service.buscarCarroPorId(id);
-        if (carroExistente.isEmpty()) {
-            System.out.println("Carro com ID " + id + " não encontrado.");
-            return;
-        }
-
-        System.out.println("Carro atual: " + carroExistente.get());
-
-        String marca = input.lerString("Nova marca: ");
-        String modelo = input.lerString("Novo modelo: ");
-        int ano = input.lerInt("Novo ano: ", 1886);
-        List<Combustivel> combustiveis = escolherCombustiveis();
-        int cavalos = input.lerInt("Novos cavalos de potência: ", 1);
-        double cilindrada = input.lerDouble("Nova cilindrada (ex: 2.0): ", 1.0);
-
-        boolean sucesso = service.atualizarCarro(id, marca, modelo, ano, combustiveis, cavalos, cilindrada);
-        if (sucesso) {
-            System.out.println("Carro atualizado com sucesso.");
-        } else {
-            System.out.println("Erro ao atualizar carro.");
-        }
-    }
-
-    void remover() {
-        System.out.print("ID do carro a remover: ");
-        int id = scanner.nextInt();
-        scanner.nextLine();
-
-        boolean sucesso = service.removerCarro(id);
-        if (sucesso) {
-            System.out.println("Carro removido com sucesso.");
-        } else {
-            System.out.println("Carro não encontrado.");
-        }
-    }
 }

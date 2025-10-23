@@ -2,12 +2,12 @@ package org.jsantostp1.repository;
 
 import org.jsantostp1.model.Carro;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class CarroRepository {
-    private final List<Carro> carros = new ArrayList<>();
+    private final List<Carro> carros = new CopyOnWriteArrayList<>();
     private int proximoId = 0;
 
     public void adicionar(Carro carro) {
@@ -24,7 +24,7 @@ public class CarroRepository {
     }
 
     public List<Carro> listarTodos() {
-        return new ArrayList<>(carros);
+        return carros;
     }
 
     public Optional<Carro> buscarPorId(int id) {
