@@ -11,6 +11,13 @@ import java.util.*;
 public class CarroController {
     private final CarroService service;
 
+    private String sanitizeInput(String input) {
+        if (input == null) return null;
+        // Remove completamente tags HTML, incluindo scripts
+        return input.replaceAll("<.*?>", "");
+    }
+
+
     public CarroController(Javalin app){
         this.service = new CarroService(new CarroRepository());
 
@@ -22,18 +29,18 @@ public class CarroController {
                 ctx.html(CarroView.renderForm(new HashMap<>()))
         );
 
-        app.post("/carros", ctx ->{
-            String marca= ctx.formParam("marca");
+        app.post("/carros", ctx -> {
+            String marca = ctx.formParam("marca");
             String modelo = ctx.formParam("modelo");
             int ano = Integer.parseInt(ctx.formParam("ano"));
             List<Combustivel> combustiveis = ctx.formParams("combustiveis").stream()
                     .map(s -> Combustivel.valueOf(s.toUpperCase()))
                     .toList();
-            if (combustiveis == null || combustiveis.isEmpty()) {
-                throw new IllegalArgumentException("Selecione pelo menos um tipo de combustível.");
-            }
             int cavalos = Integer.parseInt(ctx.formParam("cavalos"));
             double cilindrada = Double.parseDouble(ctx.formParam("cilindrada"));
+
+            marca = sanitizeInput(marca);
+            modelo = sanitizeInput(modelo);
 
             service.cadastrarCarro(marca, modelo, ano, combustiveis, cavalos, cilindrada);
             ctx.redirect("/carros");
@@ -67,6 +74,9 @@ public class CarroController {
                     .toList();
             int cavalos = Integer.parseInt(ctx.formParam("cavalos"));
             double cilindrada = Double.parseDouble(ctx.formParam("cilindrada"));
+
+            marca = sanitizeInput(marca);
+            modelo = sanitizeInput(modelo);
 
             boolean atualizado = service.atualizarCarro(id, marca, modelo, ano, combustiveis, cavalos, cilindrada);
 
