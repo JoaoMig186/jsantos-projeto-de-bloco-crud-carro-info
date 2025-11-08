@@ -1,0 +1,62 @@
+name: Build, Test & Code Analysis (Gradle)
+
+on:
+  push:
+    branches: [ "master" ]
+    paths:
+      - '**/*.java'
+      - 'build.gradle'
+      - 'settings.gradle'
+      - '.github/workflows/**'
+  pull_request:
+    branches: [ "master" ]
+    paths:
+      - '**/*.java'
+      - 'build.gradle'
+      - 'settings.gradle'
+      - '.github/workflows/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Dar permissão de execução ao Gradle Wrapper
+        run: chmod +x gradlew
+
+      - name: Build do projeto
+        run: ./gradlew clean build --no-daemon
+
+      - name: Executar testes automatizados (JUnit + Jacoco)
+        run: ./gradlew test jacocoTestReport --no-daemon
+
+      - name: Upload relatório de testes
+        uses: actions/upload-artifact@v4
+        with:
+          name: relatorio-testes
+          path: build/reports/tests/test
+
+      - name: Upload relatório de cobertura (Jacoco)
+        uses: actions/upload-artifact@v4
+        with:
+          name: relatorio-cobertura
+          path: build/reports/jacoco/test/html
+
+      - name: Executar análise estática de código (SpotBugs)
+        run: ./gradlew spotbugsMain --no-daemon
+
+      - name: Upload relatório SpotBugs
+        uses: actions/upload-artifact@v4
+        with:
+          name: relatorio-spotbugs
+          path: build/reports/spotbugs
