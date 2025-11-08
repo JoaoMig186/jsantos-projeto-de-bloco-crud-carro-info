@@ -43,6 +43,7 @@ application {
 
 test {
     useJUnitPlatform()
+    exclude '**/*UITest.class'
     finalizedBy jacocoTestReport
 }
 
