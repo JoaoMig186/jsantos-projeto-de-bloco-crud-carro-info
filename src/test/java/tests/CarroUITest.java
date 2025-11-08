@@ -4,6 +4,7 @@ import io.github.bonigarcia.wdm.WebDriverManager;
 import org.junit.jupiter.api.*;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
 import pages.CarroFormPage;
 import pages.CarroListPage;
 
@@ -19,7 +20,17 @@ public class CarroUITest {
 
     @BeforeEach
     public void setupTest() {
-        driver = new ChromeDriver();
+        ChromeOptions options = new ChromeOptions();
+
+        String isCI = System.getenv("GITHUB_ACTIONS");
+        if ("true".equals(isCI)) {
+            options.addArguments("--headless=new");
+            options.addArguments("--disable-gpu");
+            options.addArguments("--no-sandbox");
+            options.addArguments("--disable-dev-shm-usage");
+        }
+
+        driver = new ChromeDriver(options);
     }
 
     @AfterEach
@@ -33,12 +44,10 @@ public class CarroUITest {
     public void deveCadastrarNovoCarroComSucesso() {
         CarroFormPage formPage = new CarroFormPage(driver);
         formPage.open();
-
         formPage.fillForm("Toyota", "Corolla", "2022", "150", "1.8");
         formPage.selectCombustivel("diesel");
         formPage.selectCombustivel("gasolina");
         formPage.submit();
-
         Assertions.assertTrue(driver.getCurrentUrl().contains("/carros"));
     }
 
@@ -79,8 +88,8 @@ public class CarroUITest {
         Assertions.assertTrue(listPage.containsCarro("Celta", "Chevrolet"));
 
         listPage.clickExcluirPrimeiro();
-
         listPage.open();
+
         Assertions.assertTrue(listPage.containsCarro("Celta", "Chevrolet"));
     }
 }
