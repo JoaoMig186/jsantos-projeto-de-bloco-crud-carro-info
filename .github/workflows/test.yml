@@ -5,9 +5,15 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
 
 jobs:
-  test:
+  analyze:
     runs-on: ubuntu-latest
 
     steps:
@@ -23,8 +29,22 @@ jobs:
       - name: Permitir execução do Gradle Wrapper
         run: chmod +x gradlew
 
+      - name: Build para CodeQL
+        run: ./gradlew clean build --no-daemon
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: 'java'
+
+      - name: Run CodeQL autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
       - name: Executar testes com cobertura
-        run: ./gradlew clean test jacocoTestReport --no-daemon
+        run: ./gradlew test jacocoTestReport --no-daemon
 
       - name: Publicar resultados dos testes
         uses: actions/upload-artifact@v4
@@ -37,12 +57,3 @@ jobs:
         with:
           name: coverage-report
           path: build/reports/jacoco/test/html
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: 'java'
-
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
-
