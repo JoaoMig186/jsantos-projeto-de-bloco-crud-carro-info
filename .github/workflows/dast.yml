@@ -7,9 +7,9 @@ on:
     branches: [ main, master ]
     
 permissions:
-  contents: read
+  contents: write
   security-events: write
-  actions: read
+  actions: write
   issues: write
   
 jobs:
@@ -41,11 +41,11 @@ jobs:
           target: "http://localhost:7000"
           cmd_options: "-a"
 
-      - name: Publicar relatório ZAP
+      - name: Upload ZAP Scan Report
         uses: actions/upload-artifact@v4
         with:
-          name: zap-report
-          path: zap_report.html
+          name: zap-scan
+          path: report-zap/
 
       - name: Finalizar aplicação
         run: |
