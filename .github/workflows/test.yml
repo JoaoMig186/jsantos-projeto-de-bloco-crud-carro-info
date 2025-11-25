@@ -37,3 +37,12 @@ jobs:
         with:
           name: coverage-report
           path: build/reports/jacoco/test/html
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: 'java'
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
