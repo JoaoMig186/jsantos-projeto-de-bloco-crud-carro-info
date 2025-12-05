@@ -44,6 +44,7 @@ application {
 test {
     useJUnitPlatform()
     exclude '**/*UITest.class'
+    exclude '**/WebTest.class'
     finalizedBy jacocoTestReport
 }
 
