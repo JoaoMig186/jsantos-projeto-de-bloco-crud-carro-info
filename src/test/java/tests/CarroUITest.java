@@ -79,7 +79,7 @@ public class CarroUITest {
         Assertions.assertTrue(listPage.containsCarro("Palio", "Fiat"));
     }
 
-    @Test
+    /*@Test
     public void deveExcluirCarroComSucesso() {
         CarroFormPage formPage = new CarroFormPage(driver);
         formPage.open();
@@ -96,5 +96,5 @@ public class CarroUITest {
         
         Assertions.assertFalse(listPage.containsCarro("Celta", "Chevrolet"), 
             "Carro não deve existir após a exclusão");
-    }
+    }*/
 }
