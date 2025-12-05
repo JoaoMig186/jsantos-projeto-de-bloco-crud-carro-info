@@ -37,10 +37,18 @@ public class WebTest {
         options.addArguments("--headless=new");
         options.addArguments("--no-sandbox");
         options.addArguments("--disable-dev-shm-usage");
+        options.addArguments("--disable-gpu");
+        options.addArguments("--disable-software-rasterizer");
+        options.addArguments("--window-size=1920,1080");
+        
+        String isCI = System.getenv("GITHUB_ACTIONS");
+        if ("true".equals(isCI)) {
+            options.setBinary("/usr/bin/chromium-browser");
+        }
 
         driver = new ChromeDriver(options);
 
-        driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(5));
+        driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
     }
 
     @Test

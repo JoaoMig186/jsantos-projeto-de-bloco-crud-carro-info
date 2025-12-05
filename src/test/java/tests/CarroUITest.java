@@ -28,9 +28,13 @@ public class CarroUITest {
             options.addArguments("--disable-gpu");
             options.addArguments("--no-sandbox");
             options.addArguments("--disable-dev-shm-usage");
+            options.addArguments("--disable-software-rasterizer");
+            options.addArguments("--window-size=1920,1080");
+            options.setBinary("/usr/bin/chromium-browser");
         }
 
         driver = new ChromeDriver(options);
+        driver.manage().timeouts().implicitlyWait(java.time.Duration.ofSeconds(10));
     }
 
     @AfterEach
