@@ -60,7 +60,6 @@ jobs:
     needs: pre-deploy-validation
     environment:
       name: production
-      url: ${{ secrets.PROD_URL || 'http://prod.example.com' }}
 
     steps:
       - name: Checkout código
@@ -252,5 +251,5 @@ jobs:
           echo "- **Versão**: ${{ github.event.inputs.version || 'N/A' }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Autor**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Ambiente**: Production" >> $GITHUB_STEP_SUMMARY
-          echo "- **URL**: ${{ secrets.PROD_URL || 'N/A' }}" >> $GITHUB_SUMMARY
+          echo "- **URL**: ${{ secrets.PROD_URL || 'N/A' }}" >> $GITHUB_STEP_SUMMARY
 

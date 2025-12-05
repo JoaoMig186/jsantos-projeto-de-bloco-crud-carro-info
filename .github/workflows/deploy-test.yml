@@ -49,7 +49,6 @@ jobs:
     needs: pre-deploy-checks
     environment:
       name: test
-      url: ${{ secrets.TEST_URL || 'http://test.example.com' }}
 
     steps:
       - name: Checkout código
