@@ -57,3 +57,9 @@ jobs:
         with:
           name: coverage-report
           path: build/reports/jacoco/test/html
+
+      #test pós deploy com selenium
+      - name: Run Selenium Test
+        run: mvn verify
+
+
