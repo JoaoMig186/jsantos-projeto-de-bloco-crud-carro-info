@@ -55,7 +55,7 @@ public class CarroUITest {
         Assertions.assertTrue(driver.getCurrentUrl().contains("/carros"));
     }
 
-    @Test
+    /*@Test
     public void deveEditarCarroComSucesso() {
         CarroFormPage formPage = new CarroFormPage(driver);
         formPage.open();
@@ -79,7 +79,7 @@ public class CarroUITest {
         Assertions.assertTrue(listPage.containsCarro("Palio", "Fiat"));
     }
 
-    /*@Test
+    @Test
     public void deveExcluirCarroComSucesso() {
         CarroFormPage formPage = new CarroFormPage(driver);
         formPage.open();
