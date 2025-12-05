@@ -3,7 +3,10 @@ package pages;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.ui.WebDriverWait;
+import org.openqa.selenium.support.ui.ExpectedConditions;
 
+import java.time.Duration;
 import java.util.List;
 
 public class CarroListPage {
@@ -31,6 +34,9 @@ public class CarroListPage {
     public void clickExcluirPrimeiro() {
         WebElement botaoExcluir = driver.findElement(By.cssSelector("form[action^='/carros/delete/'] button"));
         botaoExcluir.click();
+        
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(5));
+        wait.until(ExpectedConditions.urlContains("/carros"));
     }
 
     public List<WebElement> listarLinhas() {

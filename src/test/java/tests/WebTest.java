@@ -20,13 +20,18 @@ public class WebTest {
     private WebDriver driver;
 
     @BeforeAll
-    void startServer() throws IOException, IOException {
-        app = Main.startServer();
+    void startServer() throws IOException {
+        String isCI = System.getenv("GITHUB_ACTIONS");
+        if (!"true".equals(isCI)) {
+            app = Main.startServer();
+        }
     }
 
     @AfterAll
     void stopServer() {
-        if (app != null) app.stop();
+        if (app != null) {
+            app.stop();
+        }
     }
 
     @BeforeEach

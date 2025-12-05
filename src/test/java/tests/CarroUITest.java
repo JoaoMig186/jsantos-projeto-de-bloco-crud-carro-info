@@ -89,11 +89,12 @@ public class CarroUITest {
 
         CarroListPage listPage = new CarroListPage(driver);
         listPage.open();
-        Assertions.assertTrue(listPage.containsCarro("Celta", "Chevrolet"));
+        Assertions.assertTrue(listPage.containsCarro("Celta", "Chevrolet"), 
+            "Carro deve existir antes da exclusão");
 
         listPage.clickExcluirPrimeiro();
-        listPage.open();
-
-        Assertions.assertTrue(listPage.containsCarro("Celta", "Chevrolet"));
+        
+        Assertions.assertFalse(listPage.containsCarro("Celta", "Chevrolet"), 
+            "Carro não deve existir após a exclusão");
     }
 }
