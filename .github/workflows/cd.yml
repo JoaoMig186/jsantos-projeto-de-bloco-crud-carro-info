@@ -28,6 +28,12 @@ jobs:
       - name: Build JAR
         run: ./gradlew clean build --no-daemon
 
+      - name: Upload JAR como artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: app
+          path: build/libs/*.jar
+
       - name: Baixar artefato
         uses: actions/download-artifact@v4
         with:
