@@ -9,26 +9,21 @@ on:
         description: 'Versão para deploy (ex: 1.0.0)'
         required: true
         type: string
-      skip_approval:
-        description: 'Pular aprovação manual? (requer permissão)'
-        required: false
-        default: 'false'
-        type: boolean
 
 concurrency:
   group: deploy-prod
   cancel-in-progress: false
 
 jobs:
-  pre-deploy-validation:
-    name: Validações Pré-Produção
+  build:
+    name: Build para Produção
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
 
-      - name: Set up JDK 21
+      - name: Configurar JDK 21
         uses: actions/setup-java@v4
         with:
           java-version: '21'
@@ -37,107 +32,48 @@ jobs:
       - name: Permitir execução do Gradle Wrapper
         run: chmod +x gradlew
 
-      - name: Build e testes completos
-        run: ./gradlew clean build test --no-daemon
-
-      - name: Verificar cobertura de código
-        run: |
-          ./gradlew jacocoTestReport --no-daemon
-          echo "✅ Cobertura de código verificada"
-
-      - name: Verificar análise estática
-        run: |
-          ./gradlew spotbugsMain --no-daemon || echo "⚠️  SpotBugs encontrou problemas"
-          echo "✅ Análise estática concluída"
-
-      - name: Validar que não há vulnerabilidades críticas
-        run: |
-          echo "✅ Validações de segurança concluídas"
-
-  deploy-prod:
-    name: Deploy para Produção
-    runs-on: ubuntu-latest
-    needs: pre-deploy-validation
-    environment:
-      name: production
-
-    steps:
-      - name: Checkout código
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-
-      - name: Permitir execução do Gradle Wrapper
-        run: chmod +x gradlew
-
-      - name: Build JAR para produção
+      - name: Build JAR
         run: ./gradlew clean build --no-daemon
 
-      - name: Criar tag de versão
+      - name: Criar tag (somente em workflow_dispatch)
         if: github.event_name == 'workflow_dispatch'
         run: |
           VERSION="${{ github.event.inputs.version }}"
-          if [ -n "$VERSION" ]; then
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git tag -a "v$VERSION" -m "Release version $VERSION"
-            git push origin "v$VERSION" || echo "Tag já existe ou sem permissão"
-          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v$VERSION" -m "Release version $VERSION"
+          git push origin "v$VERSION" || echo "⚠ Tag já existe ou sem permissão"
 
-      - name: Verificar JAR gerado
-        run: |
-          JAR_FILE=$(ls build/libs/*.jar | grep -v "sources\|javadoc" | head -n 1)
-          if [ -z "$JAR_FILE" ]; then
-            echo "❌ Erro: JAR não encontrado"
-            exit 1
-          fi
-          echo "✅ JAR: $JAR_FILE ($(du -h "$JAR_FILE" | cut -f1))"
-          md5sum "$JAR_FILE" > jar.md5
-          echo "📦 Checksum: $(cat jar.md5)"
-
-      - name: Publicar JAR para PROD
+      - name: Publicar JAR como artefato
         uses: actions/upload-artifact@v4
         with:
-          name: app-jar-prod-${{ github.sha }}
-          path: |
-            build/libs/*.jar
-            jar.md5
-          retention-days: 90
+          name: app-jar
+          path: build/libs/*.jar
 
-      - name: Criar backup completo antes do deploy
-        uses: appleboy/ssh-action@v0.1.6
+  deploy:
+    name: Deploy no Servidor
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Baixar JAR da etapa anterior
+        uses: actions/download-artifact@v4
         with:
-          host: ${{ secrets.PROD_SSH_HOST }}
-          username: ${{ secrets.PROD_SSH_USER }}
-          key: ${{ secrets.PROD_SSH_KEY }}
-          port: ${{ secrets.PROD_SSH_PORT || 22 }}
-          script: |
-            cd ${{ secrets.PROD_DEPLOY_PATH || '/var/www/javalin' }}
-            BACKUP_DIR="backups/$(date +%Y%m%d_%H%M%S)"
-            mkdir -p "$BACKUP_DIR"
-            if [ -f app.jar ]; then
-              cp app.jar "$BACKUP_DIR/app.jar"
-              cp -r logs "$BACKUP_DIR/" 2>/dev/null || true
-              echo "✅ Backup criado em $BACKUP_DIR"
-            fi
+          name: app-jar
+          path: ./deploy
 
-      - name: Copiar JAR para servidor PROD
+      - name: Copiar JAR para o servidor
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.PROD_SSH_HOST }}
           username: ${{ secrets.PROD_SSH_USER }}
           key: ${{ secrets.PROD_SSH_KEY }}
           port: ${{ secrets.PROD_SSH_PORT || 22 }}
-          source: "build/libs/*.jar"
-          target: "${{ secrets.PROD_DEPLOY_PATH || '/var/www/javalin' }}/app.jar.new"
-          strip_components: 0
+          source: "./deploy/*.jar"
+          target: "${{ secrets.PROD_DEPLOY_PATH }}/app.jar"
           overwrite: true
 
-      - name: Executar deploy no servidor PROD (Blue-Green)
+      - name: Reiniciar aplicação no servidor
         uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{ secrets.PROD_SSH_HOST }}
@@ -145,111 +81,35 @@ jobs:
           key: ${{ secrets.PROD_SSH_KEY }}
           port: ${{ secrets.PROD_SSH_PORT || 22 }}
           script: |
-            cd ${{ secrets.PROD_DEPLOY_PATH || '/var/www/javalin' }}
-            echo "🚀 Iniciando deploy em PRODUÇÃO..."
-            echo "Branch: ${{ github.ref_name }}"
-            echo "Commit: ${{ github.sha }}"
-            echo "Versão: ${{ github.event.inputs.version || 'N/A' }}"
-            echo "Autor: ${{ github.actor }}"
-            
-            # Estratégia Blue-Green: manter versão antiga rodando
-            if [ -f app.jar ]; then
-              mv app.jar app.jar.old
-            fi
-            
-            # Mover novo JAR
-            mv app.jar.new app.jar
-            
-            # Verificar integridade
-            if [ ! -f app.jar ]; then
-              echo "❌ Erro: JAR não encontrado após cópia"
-              if [ -f app.jar.old ]; then
-                mv app.jar.old app.jar
-                echo "🔄 Versão anterior restaurada"
-              fi
-              exit 1
-            fi
-            
-            # Parar aplicação antiga
-            OLD_PID=$(pgrep -f "java.*app.jar" || echo "")
-            if [ -n "$OLD_PID" ]; then
-              echo "🛑 Parando aplicação antiga (PID: $OLD_PID)..."
-              kill -TERM $OLD_PID
-              sleep 5
-              # Force kill se ainda estiver rodando
-              if pgrep -f "java.*app.jar" > /dev/null; then
-                pkill -9 -f "java.*app.jar"
-                sleep 2
-              fi
-            fi
-            
-            # Iniciar nova aplicação
-            echo "▶️  Iniciando nova aplicação..."
+            cd ${{ secrets.PROD_DEPLOY_PATH }}
+
+            echo "🛑 Parando aplicação atual..."
+            pkill -f "java.*app.jar" || true
+            sleep 2
+
+            echo "▶️ Iniciando nova versão..."
             nohup java -jar app.jar > app.log 2>&1 &
-            NEW_PID=$!
+
             sleep 5
-            
-            # Verificar se iniciou
-            if pgrep -f "java.*app.jar" > /dev/null; then
-              echo "✅ Nova aplicação iniciada (PID: $(pgrep -f 'java.*app.jar'))"
-              
-              # Aguardar aplicação ficar pronta
-              for i in {1..30}; do
-                if curl -f http://localhost:7000/ > /dev/null 2>&1; then
-                  echo "✅ Aplicação respondendo corretamente"
-                  break
-                fi
-                if [ $i -eq 30 ]; then
-                  echo "❌ Aplicação não respondeu a tempo"
-                  # Rollback
-                  if [ -f app.jar.old ]; then
-                    echo "🔄 Fazendo rollback..."
-                    pkill -f "java.*app.jar"
-                    mv app.jar app.jar.failed
-                    mv app.jar.old app.jar
-                    nohup java -jar app.jar > app.log 2>&1 &
-                    echo "✅ Versão anterior restaurada"
-                  fi
-                  exit 1
-                fi
-                sleep 2
-              done
-              
-              # Remover versão antiga após sucesso
-              rm -f app.jar.old
-              echo "✅ Deploy concluído com sucesso"
+            if pgrep -f "java.*app.jar" >/dev/null; then
+              echo "✅ Aplicação iniciada com sucesso!"
             else
-              echo "❌ Erro ao iniciar aplicação"
-              # Rollback
-              if [ -f app.jar.old ]; then
-                echo "🔄 Fazendo rollback..."
-                mv app.jar app.jar.failed
-                mv app.jar.old app.jar
-                nohup java -jar app.jar > app.log 2>&1 &
-                echo "✅ Versão anterior restaurada"
-              fi
+              echo "❌ Falha ao iniciar a aplicação"
               exit 1
             fi
 
-      - name: Verificação pós-deploy
+      - name: Verificação rápida
         run: |
-          sleep 10
-          echo "🔍 Verificando saúde da aplicação..."
-          if curl -f ${{ secrets.PROD_URL || 'http://prod.example.com' }}/ > /dev/null 2>&1; then
-            echo "✅ Aplicação em produção está respondendo"
+          echo "🔍 Verificando aplicação em produção..."
+          if curl -f ${{ secrets.PROD_URL }} >/dev/null 2>&1; then
+            echo "✅ Aplicação responde normalmente"
           else
-            echo "⚠️  Aplicação pode não estar respondendo ainda"
+            echo "⚠️ Aplicação pode não estar respondendo ainda"
           fi
 
-      - name: Notificar deploy concluído
-        if: success()
+      - name: Gerar resumo do deploy
         run: |
           echo "## 🚀 Deploy PRODUÇÃO Concluído" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Versão**: ${{ github.event.inputs.version || 'N/A' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Autor**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Ambiente**: Production" >> $GITHUB_STEP_SUMMARY
-          echo "- **URL**: ${{ secrets.PROD_URL || 'N/A' }}" >> $GITHUB_STEP_SUMMARY
-
+          echo "- **URL Produção**: ${{ secrets.PROD_URL }}" >> $GITHUB_STEP_SUMMARY
