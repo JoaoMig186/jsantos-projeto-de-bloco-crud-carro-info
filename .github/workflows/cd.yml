@@ -8,6 +8,10 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
+    environment:
+      name: production
+      url: https://meuapp-producao.com
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -24,23 +28,13 @@ jobs:
       - name: Build JAR
         run: ./gradlew clean build --no-daemon
 
-      - name: Copy JAR to server
-        uses: appleboy/scp-action@v0.1.7
+      - name: Baixar artefato
+        uses: actions/download-artifact@v4
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          source: "build/libs/*.jar"
-          target: "/var/www/javalin/app.jar"
+          name: app
 
-      - name: Run deploy script on server
-        uses: appleboy/ssh-action@v0.1.6
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          script: |
-            cd /var/www/javalin
-            chmod +x deploy.sh
-            ./deploy.sh
+      - name: Aprovação manual
+        run: echo "Aguardando aprovação para produção"
 
+      - name: Deploy em ambiente de produção
+        run: echo "Aplicação implantada em PRODUÇÃO"
