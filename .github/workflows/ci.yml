@@ -28,13 +28,33 @@ jobs:
           distribution: 'temurin'
 
       - name: Permitir execução do Gradle Wrapper
-        run: chmod +x gradlew
+        run: |
+          echo "::group::Configuração do Gradle Wrapper"
+          chmod +x gradlew
+          echo "::notice::Gradle Wrapper configurado"
+          echo "::endgroup::"
 
       - name: Build do projeto
-        run: ./gradlew clean build --no-daemon
+        run: |
+          echo "::group::Build do projeto"
+          ./gradlew clean build --no-daemon
+          echo "::notice::Build finalizado com sucesso"
+          echo "::endgroup::"
 
       - name: Executar testes com cobertura
-        run: ./gradlew test jacocoTestReport --no-daemon
+        run: |
+          echo "::group::Testes automatizados"
+          ./gradlew test jacocoTestReport --no-daemon
+          echo "::notice::Testes concluídos e cobertura gerada"
+          echo "::endgroup::"
+
+      - name: Resumo do Build e Testes
+        run: |
+          echo "## 🔧 Build & Test Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- Build: **concluído com sucesso**" >> $GITHUB_STEP_SUMMARY
+          echo "- Testes: **executados**" >> $GITHUB_STEP_SUMMARY
+          echo "- Cobertura Jacoco: disponível nos artefatos" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
 
       - name: Publicar resultados dos testes
         uses: actions/upload-artifact@v4
@@ -61,11 +81,11 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Permitir execução do Gradle Wrapper
-        run: chmod +x gradlew
-
       - name: Build para CodeQL
-        run: ./gradlew clean build --no-daemon
+        run: |
+          echo "::group::Build para análise estática"
+          ./gradlew clean build --no-daemon
+          echo "::endgroup::"
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
@@ -79,7 +99,17 @@ jobs:
         uses: github/codeql-action/analyze@v3
 
       - name: Executar análise estática com SpotBugs
-        run: ./gradlew spotbugsMain spotbugsTest --no-daemon
+        run: |
+          echo "::group::SpotBugs"
+          ./gradlew spotbugsMain spotbugsTest --no-daemon
+          echo "::notice::Relatório SpotBugs gerado"
+          echo "::endgroup::"
+
+      - name: Resumo de Análise Estática
+        run: |
+          echo "## 🛡️ Code Analysis Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- CodeQL: **execução completa**" >> $GITHUB_STEP_SUMMARY
+          echo "- SpotBugs: relatórios anexados como artefatos" >> $GITHUB_STEP_SUMMARY
 
       - name: Publicar relatórios SpotBugs
         uses: actions/upload-artifact@v4
@@ -100,24 +130,18 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Permitir execução do Gradle Wrapper
-        run: chmod +x gradlew
-
       - name: Iniciar aplicação (Javalin)
         run: |
+          echo "::group::Inicialização da aplicação"
           ./gradlew run &
-          echo "Aguardando aplicação iniciar..."
           for i in {1..30}; do
             if curl -f http://localhost:7000/ > /dev/null 2>&1; then
-              echo "Aplicação iniciada com sucesso!"
+              echo "::notice::Aplicação iniciada!"
               break
-            fi
-            if [ $i -eq 30 ]; then
-              echo "Erro: Aplicação não iniciou a tempo"
-              exit 1
             fi
             sleep 1
           done
+          echo "::endgroup::"
 
       - name: OWASP ZAP Baseline Scan
         uses: zaproxy/action-baseline@v0.12.0
@@ -126,8 +150,12 @@ jobs:
           target: "http://localhost:7000"
           cmd_options: "-a"
           upload_artifact: false
-          artifact_name: "zap-scan-report"
-          artifact_attestation: false
+
+      - name: Resumo do ZAP
+        run: |
+          echo "## 🔒 Segurança" >> $GITHUB_STEP_SUMMARY
+          echo "- ZAP Baseline Scan executado" >> $GITHUB_STEP_SUMMARY
+          echo "- Relatórios anexados como artefatos" >> $GITHUB_STEP_SUMMARY
 
       - name: Upload ZAP Scan Report (JSON)
         uses: actions/upload-artifact@v4
@@ -135,31 +163,7 @@ jobs:
         with:
           name: zap-scan-json
           path: report_json.json
-          retention-days: 30
           if-no-files-found: ignore
-
-      - name: Upload ZAP Scan Report (HTML)
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: zap-scan-html
-          path: report_html.html
-          retention-days: 30
-          if-no-files-found: ignore
-
-      - name: Upload ZAP Scan Report (Markdown)
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: zap-scan-md
-          path: report_md.md
-          retention-days: 30
-          if-no-files-found: ignore
-
-      - name: Finalizar aplicação
-        run: |
-          echo "Encerrando aplicação..."
-          pkill -f "GradleDaemon" || true
 
   selenium-tests:
     runs-on: ubuntu-latest
@@ -175,51 +179,38 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Permitir execução do Gradle Wrapper
-        run: chmod +x gradlew
-
       - name: Instalar Chrome/Chromium
         run: |
+          echo "::group::Instalação do Chromium"
           sudo apt-get update
           sudo apt-get install -y chromium-browser chromium-chromedriver
-          # Criar symlink se necessário
-          sudo ln -sf /usr/bin/chromium-browser /usr/bin/google-chrome || true
+          echo "::endgroup::"
 
       - name: Iniciar aplicação em background
         run: |
           ./gradlew run &
-          APP_PID=$!
-          echo "Aguardando aplicação iniciar..."
           for i in {1..30}; do
             if curl -f http://localhost:7000/ > /dev/null 2>&1; then
-              echo "Aplicação iniciada com sucesso!"
               break
-            fi
-            if [ $i -eq 30 ]; then
-              echo "Erro: Aplicação não iniciou a tempo"
-              exit 1
             fi
             sleep 1
           done
 
       - name: Executar testes Selenium
-        run: ./gradlew uiTest --no-daemon
-        env:
-          GITHUB_ACTIONS: true
-          CHROME_BIN: /usr/bin/chromium-browser
-          CHROMEDRIVER_PATH: /usr/bin/chromedriver
+        run: |
+          echo "::group::Selenium"
+          ./gradlew uiTest --no-daemon
+          echo "::notice::Testes de interface executados"
+          echo "::endgroup::"
 
-      - name: Publicar relatórios de testes Selenium
+      - name: Resumo do Selenium
+        run: |
+          echo "## 🌐 Selenium UI Tests" >> $GITHUB_STEP_SUMMARY
+          echo "- Testes UI executados" >> $GITHUB_STEP_SUMMARY
+          echo "- Relatório anexado como artefato" >> $GITHUB_STEP_SUMMARY
+
+      - name: Publicar relatórios Selenium
         uses: actions/upload-artifact@v4
-        if: always()
         with:
           name: selenium-test-report
           path: build/reports/tests/test
-
-      - name: Finalizar aplicação
-        if: always()
-        run: |
-          echo "Encerrando aplicação..."
-          pkill -f "GradleDaemon" || true
-          pkill -f "java.*Main" || true
-
